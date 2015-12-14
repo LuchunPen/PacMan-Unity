@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections.Generic;
 
 public partial class GameManager: MonoBehaviour
@@ -10,12 +11,20 @@ public partial class GameManager: MonoBehaviour
         {
             if (_instance == null)
             {
-                GameManager gm = new GameObject("GameManager").AddComponent<GameManager>();
+                GameManager gm = Resources.Load("Prefabs/GameManager", typeof(GameManager)) as GameManager;
+                gm = Instantiate(gm);
                 _instance = gm;
             }
             return _instance;
         }
     }
+
+    public EventHandler<ScoreArgs> OnCurrentScoreChange;
+    public EventHandler<LevelMsgArgs> OnLevelMessageChange;
+    public EventHandler<ScoreArgs> OnPlayerLifeChange;
+
+    private int _currentScore;
+    private int _playerLife;
 
     public PacManController PacManPref;
     public Persona InkyPref;
@@ -37,9 +46,7 @@ public partial class GameManager: MonoBehaviour
 
 	void Start ()
     {
-        CreateMap();
-        CreateGamePersona();
-        Invoke("StartLevel", 3);
+        PrepareLevel();
     }
 
     void Update()
@@ -51,6 +58,24 @@ public partial class GameManager: MonoBehaviour
                 p.OnUpdate();
             }
         }
+    }
+
+
+    private void PrepareLevel()
+    {
+        CreateMap();
+        CreateGamePersona();
+
+        OnTriggerPlayerLifeChange();
+        OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "READY!");
+
+        Invoke("StartLevel", 3);
+    }
+
+    void StartLevel()
+    {
+        LevelStarted = true;
+        OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "");
     }
 }
 
@@ -94,9 +119,12 @@ public partial class GameManager
     {
         if (_playerSpawn.Count > 0)
         {
-            PacManController go = Instantiate(PacManPref, _playerSpawn[Random.Range(0, _playerSpawn.Count)], Quaternion.identity) as PacManController;
+            PacManController go = Instantiate(PacManPref, _playerSpawn[UnityEngine.Random.Range(0, _playerSpawn.Count)], Quaternion.identity) as PacManController;
             go.CollisionEvent += PacManCollisionHandler;
+            go.PackManDie += OnPlayerDieHandler;
             personas.Add(go);
+
+            _playerLife = 2;
         }
 
         if (_ghostSpawn.Count > 0)
@@ -108,16 +136,13 @@ public partial class GameManager
         }
     }
 
-    void StartLevel()
-    {
-        LevelStarted = true;
-    }
-
     private void PacManCollisionHandler(object sender, Collision2DArgs arg)
     {
-        FoodPoint fp = arg.collisionObject.GetComponent<FoodPoint>();
+        FoodPoint fp = arg.CollisionObject.GetComponent<FoodPoint>();
         if (fp != null)
         {
+            _currentScore += fp.Point; OnTriggerCurrentScoreChange();
+
             Vector3 position = fp.transform.position;
             int ix = Mathf.FloorToInt(position.x);
             int iy = Mathf.FloorToInt(position.y);
@@ -125,5 +150,22 @@ public partial class GameManager
             _map[ix, iy].CType = CellType.None;
             MapVisualizer.RefreshVisualData(position);
         }
+    }
+
+    private void OnTriggerCurrentScoreChange()
+    {
+        if (OnCurrentScoreChange != null) { OnCurrentScoreChange(this, new ScoreArgs(_currentScore)); }
+    }
+    private void OnTriggerLevelMessageChange(Vector3 position, string msg)
+    {
+        if (OnLevelMessageChange != null) { OnLevelMessageChange(this, new LevelMsgArgs(position, msg)); }
+    }
+    private void OnTriggerPlayerLifeChange()
+    {
+        if (OnPlayerLifeChange != null) { OnPlayerLifeChange(this, new ScoreArgs(_playerLife)); }
+    }
+    private void OnPlayerDieHandler(object sender, EventArgs args)
+    {
+        _playerLife--; OnTriggerPlayerLifeChange();
     }
 }

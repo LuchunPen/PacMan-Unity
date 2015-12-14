@@ -5,6 +5,8 @@ using System;
 public class PacManController: Persona
 {
     public EventHandler<Collision2DArgs> CollisionEvent;
+    public EventHandler PackManDie;
+
     public float speedMod = 1;
     public float speedModFright;
 
@@ -135,7 +137,8 @@ public class PacManController: Persona
         _anim.SetBool("IsDead", true);
         _direction = Direction.None;
         _isDead = true;
-        Destroy(this.gameObject, 3);
+
+        if (PackManDie != null) { PackManDie(this, null); }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
