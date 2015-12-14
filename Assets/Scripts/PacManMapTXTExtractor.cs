@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using System.Collections;
+using System;
 
 public class PacManMapTXTExtractor: MonoBehaviour
 {
@@ -17,7 +17,7 @@ public class PacManMapTXTExtractor: MonoBehaviour
 
     public Map2DCyclic<PMNode> GetMap()
     {
-        string[] maptext = txtmap.text.Split('\n');
+        string[] maptext = txtmap.text.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
         string[][] mapcells = new string[maptext.Length][];
 
         int rowlenght = 0;
@@ -53,23 +53,16 @@ public class PacManMapTXTExtractor: MonoBehaviour
                 int dx = map.SizeX - x - 1;
                 int dy = map.SizeY - y - 1;
 
-                if (x == 13)
-                {
-                    map[x, dy] = GetNode(maptext[y][x], true);
-                }
-                else
-                {
-                    map[x, dy] = GetNode(maptext[y][x], false);
-                }
+                map[x, dy] = GetNode(maptext[y][x]);
 
                 //mirror half
-                map[dx, dy] = GetNode(maptext[y][x], false);
+                map[dx, dy] = GetNode(maptext[y][x]);
             }
         }
         return map;
     }
 
-    private PMNode GetNode(string s, bool debug)
+    private PMNode GetNode(string s)
     {
         PMNode node = new PMNode();
         switch (s)
@@ -82,8 +75,6 @@ public class PacManMapTXTExtractor: MonoBehaviour
             case "G": node.CType = CellType.GhostHome; break;
             case "P": node.CType = CellType.PacManSpawn; break;
         }
-        if (debug) Debug.Log(s + node.CType);
-
         return node;
     }
 }

@@ -6,11 +6,13 @@ public enum CellType
     Tunnel,
     GhostHome,
     PacManSpawn,
-    Wall, 
+    Wall,
     Door,
     Point,
     Energizer,
-    Cherry
+    Cherry,
+
+    size
 }
 
 public class PMNode
