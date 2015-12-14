@@ -33,37 +33,40 @@ public class SpriteMapVisualizer: PacManMapVisualizer
         if (map != null)
         {
             _mapCellVis = new GameObject[map.SizeX * map.SizeY];
-            GameObject tileTemplate = null;
 
             for (int x = 0; x < map.SizeX; x++)
             {
                 for (int y = 0; y < map.SizeY; y++)
                 {
-                    int id = map.GetNodeID(x, y);
-                    PMNode node = map[id];
-
-                    TileExtractor te = _tileTypes[(int)node.CType];
-                    DestroyTile(id);
-
-                    if (te == null)
-                    {
-                        tileTemplate = null;
-                        continue;
-                    }
-                    else if (te as TEDouble16 != null) { tileTemplate = GetTile(x, y, te as TEDouble16); }
-                    else if (te as TESingle != null) { tileTemplate = GetTile(x, y, te as TESingle); }
-                    
-                    if (tileTemplate != null)
-                    {
-                        _mapCellVis[id] = Instantiate(tileTemplate, new Vector3(x, y, 0), Quaternion.identity) as GameObject;
-                        _mapCellVis[id].name = "Tile_x " + x + "_y " + y;
-                        _mapCellVis[id].transform.SetParent(this.transform);
-                    }
+                    CreateTile(x, y);
                 }
             }
         }
     }
 
+    private void CreateTile(int x, int y)
+    {
+        GameObject tileTemplate = null;
+        int id = GameManager.Instance.Map.GetNodeID(x, y);
+        PMNode node = GameManager.Instance.Map[id];
+
+        TileExtractor te = _tileTypes[(int)node.CType];
+        DestroyTile(id);
+
+        if (te == null)
+        {
+            tileTemplate = null;
+        }
+        else if (te as TEDouble16 != null) { tileTemplate = GetTile(x, y, te as TEDouble16); }
+        else if (te as TESingle != null) { tileTemplate = GetTile(x, y, te as TESingle); }
+
+        if (tileTemplate != null)
+        {
+            _mapCellVis[id] = Instantiate(tileTemplate, new Vector3(x, y, 0), Quaternion.identity) as GameObject;
+            _mapCellVis[id].name = "Tile_x " + x + "_y " + y;
+            _mapCellVis[id].transform.SetParent(this.transform);
+        }
+    }
     private GameObject GetTile(int x, int y, TEDouble16 ted16)
     {
         Map2DCyclic<PMNode> map = GameManager.Instance.Map;
@@ -89,6 +92,7 @@ public class SpriteMapVisualizer: PacManMapVisualizer
     {
         return tes.GetTileObject(0);
     }
+
     private void DestroyTile(int id)
     {
         if (_mapCellVis[id] != null)
@@ -99,7 +103,9 @@ public class SpriteMapVisualizer: PacManMapVisualizer
 
     public override void RefreshVisualData(Vector3 node)
     {
-        throw new NotImplementedException();
+        int ix = Mathf.FloorToInt(node.x);
+        int iy = Mathf.FloorToInt(node.y);
+        CreateTile(ix, iy);
     }
     public override void RefreshVisualData(List<Vector3> nodes)
     {

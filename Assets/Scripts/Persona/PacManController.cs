@@ -1,36 +1,25 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 
-public class PacManController: MonoBehaviour
+public class PacManController: Persona
 {
-    public static float defaultspeed = 5;
+    public EventHandler<Collision2DArgs> CollisionEvent;
     public float speedMod = 1;
     public float speedModFright;
 
     private bool _isDead = false;
     public bool IsDead { get { return _isDead; } }
-
-    private float _activeSpeedMod;
-
-    private Animator _anim;
-    private Transform _myTrans;
-
-    private Direction _direction = Direction.None;
     public Vector3 _nextPosition;
 
-    void Awake()
+    protected override void Awake()
     {
-        _myTrans = this.transform;
-        _anim = this.GetComponent<Animator>();
+        base.Awake();
         _activeSpeedMod = speedMod;
-    }
-
-	void Start ()
-    {
         CheckDirection(Direction.Left, _myTrans.position);
     }
 
-    void Update ()
+    public override void OnUpdate ()
     {
         if (_direction != Direction.None) MoveToNextPosition();
 
@@ -141,11 +130,16 @@ public class PacManController: MonoBehaviour
         }
     }
 
-    public void OnDie()
+    private void OnDie()
     {
         _anim.SetBool("IsDead", true);
         _direction = Direction.None;
         _isDead = true;
         Destroy(this.gameObject, 3);
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (CollisionEvent != null) { CollisionEvent(this, new Collision2DArgs(other)); }
     }
 }
