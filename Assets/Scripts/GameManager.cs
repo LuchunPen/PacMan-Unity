@@ -20,8 +20,9 @@ public partial class GameManager: MonoBehaviour
     }
 
     public EventHandler<ScoreArgs> OnCurrentScoreChange;
-    public EventHandler<LevelMsgArgs> OnLevelMessageChange;
+    public EventHandler<LevelMsgArgs> OnLevelMessage;
     public EventHandler<ScoreArgs> OnPlayerLifeChange;
+    public EventHandler<LevelMsgArgs> OnFloatingMessage;
 
     private int _currentScore;
     private int _playerLife;
@@ -32,11 +33,34 @@ public partial class GameManager: MonoBehaviour
     public Persona BlinkyPref;
     public Persona ClydePref;
 
-    private List<Persona> personas = new List<Persona>();
+    private List<Persona> _personas = new List<Persona>();
     private List<Vector3> _playerSpawn = new List<Vector3>();
     private List<Vector3> _ghostSpawn = new List<Vector3>();
+    public Vector3 RandomGhostSpawn
+    {
+        get
+        {
+            if (_ghostSpawn != null && _ghostSpawn.Count > 0)
+            {
+                return _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
+            }
+            else return new Vector3(0, 0, 0);
+        }
+    }
 
-    public bool LevelStarted = false;
+    public EventHandler<LevelWaveArgs> GhostBehaviourEvent;
+    public float[] LevelWaveTimes;
+    public float LevelFrightTime;
+    public float _activeWaveTimer;
+    public int _activeWave;
+    private bool _levelStarted = false;
+
+    public float _frightTime;
+    public float FrightTime
+    {
+        get { return _frightTime; }
+    }
+    private int _combo;
 
     void Awake()
     {
@@ -51,31 +75,83 @@ public partial class GameManager: MonoBehaviour
 
     void Update()
     {
-        if (LevelStarted)
+        if (_levelStarted)
         {
-            foreach(Persona p in personas)
+            if (Input.GetKeyDown(KeyCode.R))
+            {
+                PacManController pcm = _personas[0].GetComponent<PacManController>();
+                HandlePlayerDead(pcm);
+            }
+
+            UpdateTimers();
+            foreach(Persona p in _personas)
             {
                 p.OnUpdate();
             }
         }
     }
-
-
+    
     private void PrepareLevel()
     {
         CreateMap();
+        ResetTimers();
         CreateGamePersona();
+        _playerLife = 2;
 
         OnTriggerPlayerLifeChange();
         OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "READY!");
 
         Invoke("StartLevel", 3);
     }
-
-    void StartLevel()
+    private void RestartLevel()
     {
-        LevelStarted = true;
+        ResetTimers();
+        CreateGamePersona();
+        OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "READY!");
+
+        Invoke("StartLevel", 3);
+    }
+    private void ResetTimers()
+    {
+        _frightTime = 0;
+        _activeWave = -1;
+
+        _activeWaveTimer = 0;
+    }
+
+    private void StartLevel()
+    {
+        _levelStarted = true;
         OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "");
+    }
+    private void UpdateTimers()
+    {
+        if (_frightTime > 0)
+        {
+            _frightTime -= Time.deltaTime;
+        }
+        else
+        {
+            _combo = 0;
+            if (_activeWaveTimer > 0)
+            {
+                _activeWaveTimer -= Time.deltaTime;
+            }
+            else
+            {
+                _activeWave++;
+                if (_activeWave >= LevelWaveTimes.Length) { _activeWaveTimer = float.MaxValue; }
+                else { _activeWaveTimer = LevelWaveTimes[_activeWave]; }
+                if (_activeWave%2 == 0)
+                {
+                    if (GhostBehaviourEvent != null) { GhostBehaviourEvent(this, new LevelWaveArgs(GhostState.Scatter)); }
+                }
+                else
+                {
+                    if (GhostBehaviourEvent != null) { GhostBehaviourEvent(this, new LevelWaveArgs(GhostState.Chase)); }
+                }
+            }
+        }
     }
 }
 
@@ -117,38 +193,97 @@ public partial class GameManager
 
     private void CreateGamePersona()
     {
-        if (_playerSpawn.Count > 0)
+        if (_personas != null)
         {
-            PacManController go = Instantiate(PacManPref, _playerSpawn[UnityEngine.Random.Range(0, _playerSpawn.Count)], Quaternion.identity) as PacManController;
-            go.CollisionEvent += PacManCollisionHandler;
-            go.PackManDie += OnPlayerDieHandler;
-            personas.Add(go);
+            // clear personas
+            if (_personas.Count > 0)
+            {
+                for (int i = 0; i < _personas.Count; i++)
+                {
+                    GhostBehaviour gb = _personas[i].GetComponent<GhostBehaviour>();
+                    if (gb != null) { GhostBehaviourEvent -= gb.GhostBehaviourEventHandler; }
+                    Destroy(_personas[i].gameObject);
+                }
+                _personas.Clear();
+            }
 
-            _playerLife = 2;
-        }
+            //Create new personas
+            if (_playerSpawn.Count > 0)
+            {
+                PacManController go = Instantiate(PacManPref, _playerSpawn[UnityEngine.Random.Range(0, _playerSpawn.Count)], Quaternion.identity) as PacManController;
+                go.CollisionEvent += OnPlayerCollisionHandler;
+                _personas.Add(go);
+            }
 
-        if (_ghostSpawn.Count > 0)
-        {
-            //Instantiate(InkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
-            //Instantiate(PinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
-            //Instantiate(ClydePref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
-            //Instantiate(BlinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
+            if (_ghostSpawn.Count > 0)
+            {
+                GhostBehaviour gb = Instantiate(InkyPref, _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)], Quaternion.identity) as GhostBehaviour;
+                GhostBehaviourEvent += gb.GhostBehaviourEventHandler;
+                _personas.Add(gb);
+                //Instantiate(PinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
+                //Instantiate(ClydePref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
+                //Instantiate(BlinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
+            }
         }
     }
 
-    private void PacManCollisionHandler(object sender, Collision2DArgs arg)
+    #region EventHandlers
+    private void OnPlayerCollisionHandler(object sender, Collision2DArgs arg)
     {
         FoodPoint fp = arg.CollisionObject.GetComponent<FoodPoint>();
-        if (fp != null)
+        if (fp != null) { HandleEatFoodEvent(fp); return; }
+
+        GhostBehaviour gb = arg.CollisionObject.GetComponent<GhostBehaviour>();
+        if (gb != null)
         {
-            _currentScore += fp.Point; OnTriggerCurrentScoreChange();
+            if (gb.IsFrattering) { HandleEatGhostEvent(gb); return; }
+            else if (!gb.IsDead)
+            {
+                PacManController pmc = arg.Sender.GetComponent<PacManController>();
+                HandlePlayerDead(pmc);
+            }
+        }
+    }
+    private void HandleEatFoodEvent(FoodPoint fp)
+    {
+        _currentScore += fp.Point; OnTriggerCurrentScoreChange();
 
-            Vector3 position = fp.transform.position;
-            int ix = Mathf.FloorToInt(position.x);
-            int iy = Mathf.FloorToInt(position.y);
+        Vector3 position = fp.transform.position;
+        int ix = Mathf.FloorToInt(position.x);
+        int iy = Mathf.FloorToInt(position.y);
 
-            _map[ix, iy].CType = CellType.None;
-            MapVisualizer.RefreshVisualData(position);
+        if (_map[ix, iy].CType == CellType.Energizer)
+        {
+            _frightTime = LevelFrightTime;
+            if (GhostBehaviourEvent != null) GhostBehaviourEvent(this, new LevelWaveArgs(GhostState.Frightened));
+        }
+        _map[ix, iy].CType = CellType.None;
+        MapVisualizer.RefreshVisualData(position);       
+    }
+    private void HandleEatGhostEvent(GhostBehaviour gb)
+    {
+        gb.OnDie();
+        _combo++;
+        int ghostPoint = GhostBehaviour.GhostPoint * _combo;
+        _currentScore += ghostPoint;
+
+        OnTriggerCurrentScoreChange();
+        OnTriggerFloatingMessage(gb.transform.position, ghostPoint.ToString());
+    }
+    private void HandlePlayerDead(PacManController pmc)
+    {
+        if (pmc != null)
+        {
+            pmc.OnDie();
+            _levelStarted = false;
+            _playerLife--;
+
+            if (_playerLife < 0) { Invoke("GameOver", 3); }
+            else
+            {
+                OnTriggerPlayerLifeChange();
+                Invoke("RestartLevel", 3);
+            }
         }
     }
 
@@ -158,14 +293,15 @@ public partial class GameManager
     }
     private void OnTriggerLevelMessageChange(Vector3 position, string msg)
     {
-        if (OnLevelMessageChange != null) { OnLevelMessageChange(this, new LevelMsgArgs(position, msg)); }
+        if (OnLevelMessage != null) { OnLevelMessage(this, new LevelMsgArgs(position, msg)); }
     }
     private void OnTriggerPlayerLifeChange()
     {
         if (OnPlayerLifeChange != null) { OnPlayerLifeChange(this, new ScoreArgs(_playerLife)); }
     }
-    private void OnPlayerDieHandler(object sender, EventArgs args)
+    private void OnTriggerFloatingMessage(Vector3 position, string msg)
     {
-        _playerLife--; OnTriggerPlayerLifeChange();
+        if (OnFloatingMessage != null) { OnFloatingMessage(this, new LevelMsgArgs(position, msg)); }
     }
+    #endregion Eventhandlers
 }

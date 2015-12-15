@@ -19,7 +19,7 @@ public class UIManager: MonoBehaviour
     {
         _lifesprites = new List<Image>();
         GameManager.Instance.OnCurrentScoreChange += OnCurrentScoreHandler;
-        GameManager.Instance.OnLevelMessageChange += OnLevelMessageHandler;
+        GameManager.Instance.OnLevelMessage += OnLevelMessageHandler;
         GameManager.Instance.OnPlayerLifeChange += OnPlayerLifeHandler;
     }
 	
