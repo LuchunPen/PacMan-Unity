@@ -69,11 +69,12 @@ public class PacManMapTXTExtractor: MonoBehaviour
         {
             case "W": node.CType = CellType.Wall; break;
             case "o": node.CType = CellType.Point; break;
-            case "E": node.CType = CellType.Energizer; break;
+            case "A": node.CType = CellType.Energizer; break;
             case "D": node.CType = CellType.Door; break;
             case "T": node.CType = CellType.Tunnel; break;
             case "G": node.CType = CellType.GhostHome; break;
             case "P": node.CType = CellType.PacManSpawn; break;
+            case "E": node.CType = CellType.HomeEnter; break;
         }
         return node;
     }

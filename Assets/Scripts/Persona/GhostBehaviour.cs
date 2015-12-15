@@ -11,7 +11,7 @@ public enum GhostState
     Dead = 4,
 }
 
-public class GhostBehaviour: Persona
+public class GhostBehaviour : Persona
 {
     public static readonly float BlinkTime = 0.25f;
     public static readonly int GhostPoint = 200;
@@ -19,9 +19,15 @@ public class GhostBehaviour: Persona
     public GameObject Body;
     public GameObject BodyGlow;
 
+    protected Action PreviousAction;
     protected Action BehaviourAction;
+    protected Action GetNextPosition;
     protected Direction _oppositeDirection;
-    protected Vector3 target;
+
+    protected Transform _pacman;
+    protected Vector3 _target;
+    protected Vector3 _scatterPosition;
+    protected Vector3 _homePosition;
 
     public bool IsFrattering
     {
@@ -32,14 +38,21 @@ public class GhostBehaviour: Persona
         get { return BehaviourAction == DeadBehaviour; }
     }
 
+    public bool _isFree = true;
+    protected virtual bool isFree
+    {
+        get { return _isFree; }
+    }
+
     void Start()
     {
-        
+        BehaviourAction = AtHomeBehaviour;
+        _target = _myTrans.position;
     }
 
     public override void OnUpdate()
     {
-        FrightBehaviour();
+        Debug.Log(BehaviourAction.Method.Name);
         if (BehaviourAction != null) { BehaviourAction(); }
 
         if (Input.GetKeyDown(KeyCode.Q))
@@ -48,22 +61,28 @@ public class GhostBehaviour: Persona
         }
     }
 
-    public void SetData(Transform pacman, Vector3 spawnPosition, Vector3 scatterPosition)
+    public void SetData(Transform pacman, Vector3 homePosition, Vector3 scatterPosition)
     {
-
+        _pacman = pacman;
+        _homePosition = homePosition;
+        _scatterPosition = scatterPosition;
     }
 
     public override void OnDie()
     {
+        _oppositeDirection = Direction.None;
         BehaviourAction = DeadBehaviour;
     }
 
-
     public void GhostBehaviourEventHandler(object sender, LevelWaveArgs args)
     {
+        if (BehaviourAction == AtHomeBehaviour || BehaviourAction == DeadBehaviour) return;
+
         if (args.State == GhostState.Frightened)
         {
+            PreviousAction = BehaviourAction;
             BehaviourAction = FrightBehaviour;
+            _oppositeDirection = Direction.None;
         }
         else if (args.State == GhostState.Chase)
         {
@@ -71,6 +90,7 @@ public class GhostBehaviour: Persona
         }
         else if (args.State == GhostState.Scatter)
         {
+            _oppositeDirection = Direction.None;
             BehaviourAction = ScatterBehaviour;
         }
     }
@@ -127,44 +147,89 @@ public class GhostBehaviour: Persona
         Direction _potencialDir = Direction.None;
 
         if (!GameManager.Instance.Map[ix - 1, iy].IsObstacle && _oppositeDirection != Direction.Left)
-        { _potencialDir = Direction.Left; dist = Vector3.Distance(new Vector3(ix - 1, iy), target); }
+        { _potencialDir = Direction.Left; dist = Vector3.Distance(new Vector3(ix - 1, iy), _target); }
         if (!GameManager.Instance.Map[ix + 1, iy].IsObstacle && _oppositeDirection != Direction.Right)
         {
-            float newDist = Vector3.Distance(new Vector3(ix + 1, iy), target);
+            float newDist = Vector3.Distance(new Vector3(ix + 1, iy), _target);
             if (newDist < dist) { dist = newDist; _potencialDir = Direction.Right; }
         }
         if (!GameManager.Instance.Map[ix, iy - 1].IsObstacle && _oppositeDirection != Direction.Down)
         {
-            float newDist = Vector3.Distance(new Vector3(ix, iy - 1), target);
+            float newDist = Vector3.Distance(new Vector3(ix, iy - 1), _target);
             if (newDist < dist) { dist = newDist; _potencialDir = Direction.Down; }
         }
         if (!GameManager.Instance.Map[ix, iy + 1].IsObstacle && _oppositeDirection != Direction.Up)
         {
-            float newDist = Vector3.Distance(new Vector3(ix, iy + 1), target);
+            float newDist = Vector3.Distance(new Vector3(ix, iy + 1), _target);
             if (newDist < dist) { dist = newDist; _potencialDir = Direction.Up; }
         }
         SetDirection(_potencialDir, ix, iy);
     }
-    
+
+    protected void GetMinNextPositionHome()
+    {
+        int ix = Mathf.FloorToInt(_myTrans.position.x);
+        int iy = Mathf.FloorToInt(_myTrans.position.y);
+
+        float dist = float.MaxValue;
+        Direction _potencialDir = Direction.None;
+
+        if (GameManager.Instance.Map[ix - 1, iy].CType != CellType.Wall && _oppositeDirection != Direction.Left)
+        { _potencialDir = Direction.Left; dist = Vector3.Distance(new Vector3(ix - 1, iy), _target); }
+        if (GameManager.Instance.Map[ix + 1, iy].CType != CellType.Wall && _oppositeDirection != Direction.Right)
+        {
+            float newDist = Vector3.Distance(new Vector3(ix + 1, iy), _target);
+            if (newDist < dist) { dist = newDist; _potencialDir = Direction.Right; }
+        }
+        if (GameManager.Instance.Map[ix, iy - 1].CType != CellType.Wall && _oppositeDirection != Direction.Down)
+        {
+            float newDist = Vector3.Distance(new Vector3(ix, iy - 1), _target);
+            if (newDist < dist) { dist = newDist; _potencialDir = Direction.Down; }
+        }
+        if (GameManager.Instance.Map[ix, iy + 1].CType != CellType.Wall && _oppositeDirection != Direction.Up)
+        {
+            float newDist = Vector3.Distance(new Vector3(ix, iy + 1), _target);
+            if (newDist < dist) { dist = newDist; _potencialDir = Direction.Up; }
+        }
+        SetDirection(_potencialDir, ix, iy);
+    }
+
     protected override void MoveToNextPosition()
     {
         Vector3 position = _myTrans.position;
         AutoCorrectPosition(ref position, ref _nextPosition);
-        _myTrans.position = Vector3.MoveTowards(position, _nextPosition, Time.deltaTime * defaultspeed * _activeSpeedMod);
+        float dist = Vector3.Distance(position, _nextPosition);
+        if (dist < 0.1f || dist > 1.3f)
+        {
+            GetNextPosition();
+        }
+        _myTrans.position = Vector3.MoveTowards(position, _nextPosition, Time.deltaTime * defaultspeed * 0.5f);
+
     }
+
+    #region Behaviours
 
     protected virtual void ChaseBehaviour()
     {
+        GetNextPosition = GetMinNextPosition;
+        SetBodyNormal();
 
+        _target = _pacman.position;
+        MoveToNextPosition();
     }
 
     protected virtual void ScatterBehaviour()
     {
-
+        GetNextPosition = GetMinNextPosition;
+        SetBodyNormal();
+        _target = _scatterPosition;
+        MoveToNextPosition();
     }
 
     protected void FrightBehaviour()
     {
+        GetNextPosition = GetRandomNextPosition;
+
         float reducetime = GameManager.Instance.FrightTime;
         if (reducetime > 1.5f)
         {
@@ -174,16 +239,59 @@ public class GhostBehaviour: Persona
         {
             BlinkBody(reducetime);
         }
-        else if (reducetime == 0)
+        else if (reducetime <= 0)
         {
-            SetBodyNormal();
+            BehaviourAction = PreviousAction;
+            PreviousAction = null;
         }
+        MoveToNextPosition();
     }
 
     protected void DeadBehaviour()
     {
+        GetNextPosition = GetMinNextPositionHome;
         SetBodyDead();
+        _target = _homePosition;
+        Vector3 pos = _myTrans.position;
+
+        float dist = Vector3.Distance(_target, pos);
+        if (dist < 0.2f)
+        {
+            BehaviourAction = AtHomeBehaviour;
+        }
+        MoveToNextPosition();
     }
+
+    protected void AtHomeBehaviour()
+    {
+        GetNextPosition = GetMinNextPositionHome;
+        SetBodyNormal();
+        Vector3 pos = _myTrans.position;
+        _oppositeDirection = Direction.None;
+
+        if (isFree)
+        {
+            _target = GameManager.Instance.GetHomeEnter(pos);
+            float dist = Vector3.Distance(_target, pos);
+            if (dist < 0.2f)
+            {
+                BehaviourAction = ChaseBehaviour;
+                return;
+            }
+        }
+        else
+        {
+            float dist = Vector3.Distance(_target, pos);
+            if (dist < 0.2f)
+            {
+                _target = GameManager.Instance.GetGhostSpawn;
+                GetNextPosition();
+            }
+        }
+        MoveToNextPosition();
+    }
+
+    #endregion Behaviours
 
     #region Visual
     protected void BlinkBody(float time)

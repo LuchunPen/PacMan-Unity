@@ -8,6 +8,7 @@ public enum CellType
     PacManSpawn,
     Wall,
     Door,
+    HomeEnter,
     Point,
     Energizer,
     Cherry,

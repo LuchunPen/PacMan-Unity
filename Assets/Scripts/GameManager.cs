@@ -36,16 +36,21 @@ public partial class GameManager: MonoBehaviour
     private List<Persona> _personas = new List<Persona>();
     private List<Vector3> _playerSpawn = new List<Vector3>();
     private List<Vector3> _ghostSpawn = new List<Vector3>();
-    public Vector3 RandomGhostSpawn
+    private List<Vector3> _homeEnter = new List<Vector3>();
+
+    public Vector3 GetHomeEnter(Vector3 position)
     {
-        get
+        float dist = float.MaxValue; int id = 0;
+        for (int i = 0; i < _homeEnter.Count; i++)
         {
-            if (_ghostSpawn != null && _ghostSpawn.Count > 0)
-            {
-                return _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
-            }
-            else return new Vector3(0, 0, 0);
+            float newDist = Vector3.Distance(position, _homeEnter[i]);
+            if (dist > newDist) { dist = newDist; id = i; }
         }
+        return _homeEnter[id];
+    }
+    public Vector3 GetGhostSpawn
+    {
+        get { return _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)]; }
     }
 
     public EventHandler<LevelWaveArgs> GhostBehaviourEvent;
@@ -82,12 +87,8 @@ public partial class GameManager: MonoBehaviour
                 PacManController pcm = _personas[0].GetComponent<PacManController>();
                 HandlePlayerDead(pcm);
             }
-
             UpdateTimers();
-            foreach(Persona p in _personas)
-            {
-                p.OnUpdate();
-            }
+            foreach(Persona p in _personas) { p.OnUpdate(); }
         }
     }
     
@@ -95,7 +96,7 @@ public partial class GameManager: MonoBehaviour
     {
         CreateMap();
         ResetTimers();
-        CreateGamePersona();
+        CreateClassicGamePersona();
         _playerLife = 2;
 
         OnTriggerPlayerLifeChange();
@@ -106,7 +107,7 @@ public partial class GameManager: MonoBehaviour
     private void RestartLevel()
     {
         ResetTimers();
-        CreateGamePersona();
+        CreateClassicGamePersona();
         OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "READY!");
 
         Invoke("StartLevel", 3);
@@ -185,13 +186,17 @@ public partial class GameManager
                     {
                         _ghostSpawn.Add(new Vector3(x + 0.5f, y + 0.5f, 0));
                     }
+                    else if (Map[x,y].CType == CellType.HomeEnter)
+                    {
+                        _homeEnter.Add(new Vector3(x + 0.5f, y + 0.5f, 0));
+                    }
                 }
             }
         }
         else { Debug.Log("No map visualizator"); }
     }
 
-    private void CreateGamePersona()
+    private void CreateClassicGamePersona()
     {
         if (_personas != null)
         {
@@ -200,30 +205,41 @@ public partial class GameManager
             {
                 for (int i = 0; i < _personas.Count; i++)
                 {
-                    GhostBehaviour gb = _personas[i].GetComponent<GhostBehaviour>();
-                    if (gb != null) { GhostBehaviourEvent -= gb.GhostBehaviourEventHandler; }
+                    GhostBehaviour ghost = _personas[i].GetComponent<GhostBehaviour>();
+                    if (ghost != null) { GhostBehaviourEvent -= ghost.GhostBehaviourEventHandler; }
                     Destroy(_personas[i].gameObject);
                 }
                 _personas.Clear();
             }
 
             //Create new personas
-            if (_playerSpawn.Count > 0)
-            {
-                PacManController go = Instantiate(PacManPref, _playerSpawn[UnityEngine.Random.Range(0, _playerSpawn.Count)], Quaternion.identity) as PacManController;
-                go.CollisionEvent += OnPlayerCollisionHandler;
-                _personas.Add(go);
-            }
+            PacManController player = Instantiate(PacManPref, _playerSpawn[UnityEngine.Random.Range(0, _playerSpawn.Count)], Quaternion.identity) as PacManController;
+            player.CollisionEvent += OnPlayerCollisionHandler;
+            _personas.Add(player);
 
-            if (_ghostSpawn.Count > 0)
-            {
-                GhostBehaviour gb = Instantiate(InkyPref, _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)], Quaternion.identity) as GhostBehaviour;
-                GhostBehaviourEvent += gb.GhostBehaviourEventHandler;
-                _personas.Add(gb);
-                //Instantiate(PinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
-                //Instantiate(ClydePref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
-                //Instantiate(BlinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
-            }
+            Vector3 spawnpoint = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
+            GhostBehaviour blinky = Instantiate(InkyPref, spawnpoint, Quaternion.identity) as GhostBehaviour;
+            GhostBehaviourEvent += blinky.GhostBehaviourEventHandler;
+            blinky.SetData(player.transform, spawnpoint, new Vector3(1, 1, 0));
+            blinky.name = "Blinky";
+            _personas.Add(blinky);
+
+            spawnpoint = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
+            blinky = Instantiate(InkyPref, spawnpoint, Quaternion.identity) as GhostBehaviour;
+            GhostBehaviourEvent += blinky.GhostBehaviourEventHandler;
+            blinky.SetData(player.transform, spawnpoint, new Vector3(1, 1, 0));
+            blinky.name = "Blinky";
+            _personas.Add(blinky);
+
+            spawnpoint = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
+            blinky = Instantiate(InkyPref, spawnpoint, Quaternion.identity) as GhostBehaviour;
+            GhostBehaviourEvent += blinky.GhostBehaviourEventHandler;
+            blinky.SetData(player.transform, spawnpoint, new Vector3(1, 1, 0));
+            blinky.name = "Blinky";
+            _personas.Add(blinky);
+            //Instantiate(PinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
+            //Instantiate(ClydePref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
+            //Instantiate(BlinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
         }
     }
 
