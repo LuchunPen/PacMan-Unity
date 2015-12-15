@@ -27,6 +27,6 @@ public class PMNode
 
     public bool IsObstacle
     {
-        get { return _cType == CellType.Door || _cType == CellType.Wall; }
+        get { return (_cType == CellType.Door || _cType == CellType.Wall); }
     }
 }

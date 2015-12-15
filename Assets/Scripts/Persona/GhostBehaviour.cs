@@ -82,7 +82,7 @@ public class GhostBehaviour : Persona
         {
             PreviousAction = BehaviourAction;
             BehaviourAction = FrightBehaviour;
-            _oppositeDirection = Direction.None;
+            //_oppositeDirection = Direction.None;
         }
         else if (args.State == GhostState.Chase)
         {
@@ -135,7 +135,8 @@ public class GhostBehaviour : Persona
         if (!GameManager.Instance.Map[ix, iy - 1].IsObstacle && _oppositeDirection != Direction.Down) { _potencialDir.Add(Direction.Down); }
         if (!GameManager.Instance.Map[ix, iy + 1].IsObstacle && _oppositeDirection != Direction.Up) { _potencialDir.Add(Direction.Up); }
 
-        SetDirection((Direction)UnityEngine.Random.Range(0, _potencialDir.Count), ix, iy);
+        Direction dir = _potencialDir[UnityEngine.Random.Range(0, _potencialDir.Count)];
+        SetDirection(dir, ix, iy);
     }
 
     protected void GetMinNextPosition()
