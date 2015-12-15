@@ -22,15 +22,17 @@ public class ScoreArgs: EventArgs
     }
 }
 
-public class LevelMsgArgs : EventArgs
+public class MessageArgs : EventArgs
 {
     public Vector3 Position;
+    public Color MsgColor;
     public string Msg;
 
-    public LevelMsgArgs(Vector3 position, string msg)
+    public MessageArgs(Vector3 position, Color color, string msg)
     {
         Position = position;
         Msg = msg;
+        MsgColor = color;
     }
 }
 

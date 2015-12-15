@@ -20,9 +20,9 @@ public partial class GameManager: MonoBehaviour
     }
 
     public EventHandler<ScoreArgs> OnCurrentScoreChange;
-    public EventHandler<LevelMsgArgs> OnLevelMessage;
+    public EventHandler<MessageArgs> OnLevelMessage;
     public EventHandler<ScoreArgs> OnPlayerLifeChange;
-    public EventHandler<LevelMsgArgs> OnFloatingMessage;
+    public EventHandler<MessageArgs> OnFloatingMessage;
 
     private int _currentScore;
     private int _playerLife;
@@ -237,9 +237,6 @@ public partial class GameManager
             blinky.SetData(player.transform, spawnpoint, new Vector3(1, 1, 0));
             blinky.name = "Blinky";
             _personas.Add(blinky);
-            //Instantiate(PinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
-            //Instantiate(ClydePref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
-            //Instantiate(BlinkyPref, _ghostSpawn[Random.Range(0, _ghostSpawn.Count)], Quaternion.identity);
         }
     }
 
@@ -279,12 +276,15 @@ public partial class GameManager
     private void HandleEatGhostEvent(GhostBehaviour gb)
     {
         gb.OnDie();
-        _combo++;
-        int ghostPoint = GhostBehaviour.GhostPoint * _combo;
+        if (_combo == 0) { _combo = 1; }
+        else { _combo *= 2; }
+        int ghostPoint = _combo * GhostBehaviour.GhostPoint;
         _currentScore += ghostPoint;
 
         OnTriggerCurrentScoreChange();
         OnTriggerFloatingMessage(gb.transform.position, ghostPoint.ToString());
+        _levelStarted = false;
+        Invoke("StartLevel", 0.5f);
     }
     private void HandlePlayerDead(PacManController pmc)
     {
@@ -309,7 +309,7 @@ public partial class GameManager
     }
     private void OnTriggerLevelMessageChange(Vector3 position, string msg)
     {
-        if (OnLevelMessage != null) { OnLevelMessage(this, new LevelMsgArgs(position, msg)); }
+        if (OnLevelMessage != null) { OnLevelMessage(this, new MessageArgs(position, Color.white, msg)); }
     }
     private void OnTriggerPlayerLifeChange()
     {
@@ -317,7 +317,7 @@ public partial class GameManager
     }
     private void OnTriggerFloatingMessage(Vector3 position, string msg)
     {
-        if (OnFloatingMessage != null) { OnFloatingMessage(this, new LevelMsgArgs(position, msg)); }
+        if (OnFloatingMessage != null) { OnFloatingMessage(this, new MessageArgs(position, Color.white, msg)); }
     }
     #endregion Eventhandlers
 }

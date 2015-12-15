@@ -5,8 +5,9 @@ using System.Collections.Generic;
 
 public class UIManager: MonoBehaviour
 {
-    public Image lifeimg;
+    private RectTransform _canvasTrans;
 
+    public Image lifeimg;
     public RectTransform LifeContainer;
     private List<Image> _lifesprites;
 
@@ -15,25 +16,25 @@ public class UIManager: MonoBehaviour
 
     public Text LevelMessage;
 
-	void Start ()
+    public FloatingText textPref;
+    public float floatingTextSpeed;
+
+    void Start ()
     {
+        _canvasTrans = this.GetComponent<RectTransform>();
         _lifesprites = new List<Image>();
         GameManager.Instance.OnCurrentScoreChange += OnCurrentScoreHandler;
         GameManager.Instance.OnLevelMessage += OnLevelMessageHandler;
         GameManager.Instance.OnPlayerLifeChange += OnPlayerLifeHandler;
+        GameManager.Instance.OnFloatingMessage += OnFloatingTextCreator;
     }
 	
-	void Update ()
-    {
-	
-	}
-
     private void OnCurrentScoreHandler(object sender, ScoreArgs args)
     {
         PlayerScore.text = args.Score.ToString();
     }
 
-    private void OnLevelMessageHandler(object sender, LevelMsgArgs args)
+    private void OnLevelMessageHandler(object sender, MessageArgs args)
     {
         LevelMessage.rectTransform.position = args.Position;
         LevelMessage.text = args.Msg;
@@ -63,5 +64,15 @@ public class UIManager: MonoBehaviour
                 _lifesprites.RemoveAt(0);
             }
         }
+    }
+
+    private void OnFloatingTextCreator(object sender, MessageArgs args)
+    {
+        FloatingText go = Instantiate(textPref, args.Position, Quaternion.identity) as FloatingText;
+        go.transform.SetParent(_canvasTrans);
+        go.GetComponent<RectTransform>().localScale = new Vector3(1, 1, 1);
+        go.Initialize(floatingTextSpeed, new Vector3(0,1,0), 3);
+        go.GetComponent<Text>().text = args.Msg;
+        go.GetComponent<Text>().color = args.MsgColor;
     }
 }
