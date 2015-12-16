@@ -65,7 +65,6 @@ public class GhostBehaviour: Persona
 
     public override void OnUpdate()
     {
-        Debug.Log(BehaviourAction.Method.Name);
         if (BehaviourAction != null) { BehaviourAction(); }
 
         if (Input.GetKeyDown(KeyCode.Q))
