@@ -54,6 +54,11 @@ public partial class GameManager: MonoBehaviour
     }
 
     public EventHandler<LevelWaveArgs> GhostBehaviourEvent;
+    private int _level;
+    public int Level
+    {
+        get { return _level; }
+    }
     public float[] LevelWaveTimes;
     public float LevelFrightTime;
     public float _activeWaveTimer;
@@ -75,7 +80,7 @@ public partial class GameManager: MonoBehaviour
 
 	void Start ()
     {
-        PrepareLevel();
+        PrepareGame();
     }
 
     void Update()
@@ -92,18 +97,31 @@ public partial class GameManager: MonoBehaviour
         }
     }
     
-    private void PrepareLevel()
+    private void PrepareGame()
     {
+        _playerLife = 2;
+
         CreateMap();
         ResetTimers();
         CreateClassicGamePersona();
-        _playerLife = 2;
 
         OnTriggerPlayerLifeChange();
         OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "READY!");
 
         Invoke("StartLevel", 3);
     }
+    private void NextLevel()
+    {
+        _level++;
+        CreateMap();
+        ResetTimers();
+        CreateClassicGamePersona();
+
+        OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "READY!");
+
+        Invoke("StartLevel", 3);
+    }
+
     private void RestartLevel()
     {
         ResetTimers();
@@ -167,11 +185,25 @@ public partial class GameManager
     public PacManMapTXTExtractor MapCreator;
     public PacManMapVisualizer MapVisualizer;
 
+    private int _totalPoints;
+    private int _eatedPoints;
+
+    public int TotalPoints
+    {
+        get { return _totalPoints; }
+    }
+    public int EatedPoints
+    {
+        get { return _eatedPoints; }
+    }
+
     private void CreateMap()
     {
+        _map = null;
         _map = MapCreator.GetMap();
         if (MapVisualizer != null)
         {
+            MapVisualizer.DestroyVisualData();
             MapVisualizer.CreateOrRefreshVisualData();
 
             for (int x = 0; x < Map.SizeX; x++)
@@ -189,6 +221,10 @@ public partial class GameManager
                     else if (Map[x,y].CType == CellType.HomeEnter)
                     {
                         _homeEnter.Add(new Vector3(x + 0.5f, y + 0.5f, 0));
+                    }
+                    else if(Map[x, y].CType == CellType.Point || Map[x, y].CType == CellType.Energizer)
+                    {
+                        _totalPoints++;
                     }
                 }
             }
@@ -217,26 +253,34 @@ public partial class GameManager
             player.CollisionEvent += OnPlayerCollisionHandler;
             _personas.Add(player);
 
-            Vector3 spawnpoint = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
-            GhostBehaviour blinky = Instantiate(InkyPref, spawnpoint, Quaternion.identity) as GhostBehaviour;
+            Vector3 homePos = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
+            Vector3 spawnPoint = GetHomeEnter(new Vector3(0, 0, 0));
+            GhostBehaviour blinky = Instantiate(BlinkyPref, spawnPoint, Quaternion.identity) as GhostBehaviour;
             GhostBehaviourEvent += blinky.GhostBehaviourEventHandler;
-            blinky.SetData(player.transform, spawnpoint, new Vector3(1, 1, 0));
+            blinky.SetData(player.transform, homePos, new Vector3(2, 1, 0));
             blinky.name = "Blinky";
             _personas.Add(blinky);
 
-            spawnpoint = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
-            blinky = Instantiate(InkyPref, spawnpoint, Quaternion.identity) as GhostBehaviour;
-            GhostBehaviourEvent += blinky.GhostBehaviourEventHandler;
-            blinky.SetData(player.transform, spawnpoint, new Vector3(1, 1, 0));
-            blinky.name = "Blinky";
-            _personas.Add(blinky);
+            homePos = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
+            GhostBehaviour clyde = Instantiate(ClydePref, homePos, Quaternion.identity) as GhostBehaviour;
+            GhostBehaviourEvent += clyde.GhostBehaviourEventHandler;
+            clyde.SetData(player.transform, homePos, new Vector3(23, 29, 0));
+            clyde.name = "Clyde";
+            _personas.Add(clyde);
 
-            spawnpoint = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
-            blinky = Instantiate(InkyPref, spawnpoint, Quaternion.identity) as GhostBehaviour;
-            GhostBehaviourEvent += blinky.GhostBehaviourEventHandler;
-            blinky.SetData(player.transform, spawnpoint, new Vector3(1, 1, 0));
-            blinky.name = "Blinky";
-            _personas.Add(blinky);
+            homePos = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
+            GhostBehaviour pinky = Instantiate(PinkyPref, homePos, Quaternion.identity) as GhostBehaviour;
+            GhostBehaviourEvent += pinky.GhostBehaviourEventHandler;
+            pinky.SetData(player.transform, homePos, new Vector3(2, 29, 0));
+            pinky.name = "Pinky";
+            _personas.Add(pinky);
+
+            homePos = _ghostSpawn[UnityEngine.Random.Range(0, _ghostSpawn.Count)];
+            InkyBeh inky = Instantiate(InkyPref, homePos, Quaternion.identity) as InkyBeh;
+            GhostBehaviourEvent += inky.GhostBehaviourEventHandler;
+            inky.SetData(player.transform, blinky.transform, homePos, new Vector3(23, 1, 0));
+            inky.name = "Inky";
+            _personas.Add(inky);
         }
     }
 
@@ -265,13 +309,22 @@ public partial class GameManager
         int ix = Mathf.FloorToInt(position.x);
         int iy = Mathf.FloorToInt(position.y);
 
+        if (_map[ix,iy].CType == CellType.Point) { _eatedPoints++; }
+
         if (_map[ix, iy].CType == CellType.Energizer)
         {
+            _eatedPoints++;
             _frightTime = LevelFrightTime;
             if (GhostBehaviourEvent != null) GhostBehaviourEvent(this, new LevelWaveArgs(GhostState.Frightened));
         }
         _map[ix, iy].CType = CellType.None;
-        MapVisualizer.RefreshVisualData(position);       
+        MapVisualizer.RefreshVisualData(position); 
+        
+        if (_eatedPoints == _totalPoints)
+        {
+            _levelStarted = false;
+            NextLevel();
+        }
     }
     private void HandleEatGhostEvent(GhostBehaviour gb)
     {

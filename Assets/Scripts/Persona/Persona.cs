@@ -7,6 +7,10 @@ public abstract class Persona: MonoBehaviour
     protected float _activeSpeedMod;
 
     protected Direction _direction = Direction.None;
+    public Direction ActualDirection
+    {
+        get { return _direction; }
+    }
     protected Vector3 _nextPosition;
 
     protected Animator _anim;

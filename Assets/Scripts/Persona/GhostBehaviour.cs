@@ -11,9 +11,10 @@ public enum GhostState
     Dead = 4,
 }
 
-public class GhostBehaviour : Persona
+public class GhostBehaviour: Persona
 {
     public static readonly float BlinkTime = 0.25f;
+    public static readonly float deadSpeedMod = 2f;
     public static readonly int GhostPoint = 200;
 
     public GameObject Body;
@@ -29,6 +30,10 @@ public class GhostBehaviour : Persona
     protected Vector3 _scatterPosition;
     protected Vector3 _homePosition;
 
+    protected float _normalSpeedMod;
+    protected float _tunnelSpeedMod;
+    protected float _frightSpeedMod;
+
     public bool IsFrattering
     {
         get { return BehaviourAction == FrightBehaviour; }
@@ -38,16 +43,24 @@ public class GhostBehaviour : Persona
         get { return BehaviourAction == DeadBehaviour; }
     }
 
-    public bool _isFree = true;
-    protected virtual bool isFree
+    protected virtual bool _isFree
     {
-        get { return _isFree; }
+        get { return true; }
     }
 
-    void Start()
+    protected virtual void Start()
     {
+        GetSpeedData();
         BehaviourAction = AtHomeBehaviour;
         _target = _myTrans.position;
+    }
+
+    protected void GetSpeedData()
+    {
+        PersonaSpeed speedtable = ClassicLevelTable.GetSpeedTable(GameManager.Instance.Level);
+        _normalSpeedMod = speedtable.GhostSpeedNormal;
+        _tunnelSpeedMod = speedtable.GhostTunnelSpeed;
+        _frightSpeedMod = speedtable.GhostSpeedFright;
     }
 
     public override void OnUpdate()
@@ -204,7 +217,15 @@ public class GhostBehaviour : Persona
         {
             GetNextPosition();
         }
-        _myTrans.position = Vector3.MoveTowards(position, _nextPosition, Time.deltaTime * defaultspeed * 0.5f);
+
+        int ix = Mathf.FloorToInt(position.x);
+        int iy = Mathf.FloorToInt(position.y);
+
+        CellType celltype = GameManager.Instance.Map[ix,iy].CType;
+        if (celltype == CellType.Tunnel) { _activeSpeedMod = _tunnelSpeedMod;}
+
+        if (_activeSpeedMod <= 0) { _activeSpeedMod = 1; }
+        _myTrans.position = Vector3.MoveTowards(position, _nextPosition, Time.deltaTime * defaultspeed * _activeSpeedMod);
 
     }
 
@@ -216,6 +237,7 @@ public class GhostBehaviour : Persona
         SetBodyNormal();
 
         _target = _pacman.position;
+        _activeSpeedMod = _normalSpeedMod;
         MoveToNextPosition();
     }
 
@@ -223,7 +245,9 @@ public class GhostBehaviour : Persona
     {
         GetNextPosition = GetMinNextPosition;
         SetBodyNormal();
+
         _target = _scatterPosition;
+        _activeSpeedMod = _normalSpeedMod;
         MoveToNextPosition();
     }
 
@@ -245,6 +269,7 @@ public class GhostBehaviour : Persona
             BehaviourAction = PreviousAction;
             PreviousAction = null;
         }
+        _activeSpeedMod = _frightSpeedMod;
         MoveToNextPosition();
     }
 
@@ -260,6 +285,8 @@ public class GhostBehaviour : Persona
         {
             BehaviourAction = AtHomeBehaviour;
         }
+
+        _activeSpeedMod = deadSpeedMod;
         MoveToNextPosition();
     }
 
@@ -270,7 +297,7 @@ public class GhostBehaviour : Persona
         Vector3 pos = _myTrans.position;
         _oppositeDirection = Direction.None;
 
-        if (isFree)
+        if (_isFree)
         {
             _target = GameManager.Instance.GetHomeEnter(pos);
             float dist = Vector3.Distance(_target, pos);
@@ -289,6 +316,8 @@ public class GhostBehaviour : Persona
                 GetNextPosition();
             }
         }
+
+        _activeSpeedMod = _normalSpeedMod;
         MoveToNextPosition();
     }
 

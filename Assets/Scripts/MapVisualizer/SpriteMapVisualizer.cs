@@ -113,6 +113,12 @@ public class SpriteMapVisualizer: PacManMapVisualizer
     }
     public override void DestroyVisualData()
     {
-        throw new NotImplementedException();
+        if (_mapCellVis != null)
+        {
+            for (int i = 0; i < _mapCellVis.Length; i++)
+            {
+                if (_mapCellVis[i] != null) { Destroy(_mapCellVis[i].gameObject); }
+            }
+        }
     }
 }

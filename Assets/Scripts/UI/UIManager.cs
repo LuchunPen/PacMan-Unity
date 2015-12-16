@@ -19,7 +19,7 @@ public class UIManager: MonoBehaviour
     public FloatingText textPref;
     public float floatingTextSpeed;
 
-    void Start ()
+    void Awake ()
     {
         _canvasTrans = this.GetComponent<RectTransform>();
         _lifesprites = new List<Image>();
@@ -42,6 +42,7 @@ public class UIManager: MonoBehaviour
 
     private void OnPlayerLifeHandler(object sender, ScoreArgs args)
     {
+        Debug.Log(args.Score);
         int count = args.Score;
         int lifecount = _lifesprites.Count;
 

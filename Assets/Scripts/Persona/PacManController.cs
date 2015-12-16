@@ -6,8 +6,8 @@ public class PacManController: Persona
 {
     public EventHandler<Collision2DArgs> CollisionEvent;
 
-    public float speedMod = 1;
-    public float speedModFright;
+    private float _speedModNormal;
+    private float _speedModFright;
 
     private bool _isDead = false;
     public bool IsDead { get { return _isDead; } }
@@ -15,7 +15,10 @@ public class PacManController: Persona
     protected override void Awake()
     {
         base.Awake();
-        _activeSpeedMod = speedMod;
+        PersonaSpeed speedTable = ClassicLevelTable.GetSpeedTable(GameManager.Instance.Level);
+        _speedModNormal = speedTable.PacManSpeedNormal;
+        _speedModFright = speedTable.PacManSpeedFright;
+
         CheckDirection(Direction.Left, _myTrans.position);
     }
 
@@ -87,6 +90,9 @@ public class PacManController: Persona
 
     protected override void MoveToNextPosition()
     {
+        if (GameManager.Instance.FrightTime > 0) { _activeSpeedMod = _speedModFright; }
+        else { _activeSpeedMod = _speedModNormal; }
+
         Vector3 position = _myTrans.position;
         AutoCorrectPosition(ref position, ref _nextPosition);
 
