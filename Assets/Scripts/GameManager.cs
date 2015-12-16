@@ -20,13 +20,14 @@ public partial class GameManager: MonoBehaviour
     }
 
     public EventHandler OnStartGame;
+    public EventHandler OnGameOver;
+    public EventHandler<BoolEventArgs> OnGamePause;
     public EventHandler<ScoreArgs> OnCurrentScoreChange;
     public EventHandler<MessageArgs> OnLevelMessage;
     public EventHandler<ScoreArgs> OnPlayerLifeChange;
     public EventHandler<CellEventArgs> OnBonusPlaced;
     public EventHandler<MessageArgs> OnFloatingMessage;
 
-    private bool _levelStarted;
     private int _currentScore;
     private int _playerLife;
 
@@ -66,7 +67,10 @@ public partial class GameManager: MonoBehaviour
     public float LevelFrightTime;
     public float _activeWaveTimer;
     public int _activeWave;
-    private bool _levelPaused = true;
+
+    private bool _levelStarted = false;
+    private bool _levelPause = true;
+    private bool _gamePause = false;
 
     public float _frightTime;
     public float FrightTime
@@ -81,26 +85,22 @@ public partial class GameManager: MonoBehaviour
         else { Destroy(this.gameObject); }
     }
 
-	void Start ()
-    {
-
-    }
-
     void Update()
     {
-        if (!_levelStarted)
+        if (_levelStarted)
         {
-            if ((Input.GetKeyDown(KeyCode.Space)) || (Input.GetKeyDown(KeyCode.Return)))
+            if (Input.GetKeyDown(KeyCode.P))
             {
-                _levelStarted = true;
-                if (OnStartGame != null) OnStartGame(this, null);
-                PrepareGame();
+                _gamePause = !_gamePause;
+                if (OnGamePause != null) { OnGamePause(this, new BoolEventArgs(_gamePause)); }
             }
-        }
 
-        else
-        {
-            if(!_levelPaused)
+            if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                GameOver();
+            }
+
+            if (!_gamePause && !_levelPause)
             {
                 if (Input.GetKeyDown(KeyCode.R))
                 {
@@ -115,6 +115,8 @@ public partial class GameManager: MonoBehaviour
     
     public void PrepareGame()
     {
+        _levelStarted = true;
+        _currentScore = 0;
         _playerLife = 2;
 
         CreateMap();
@@ -122,10 +124,11 @@ public partial class GameManager: MonoBehaviour
         ResetTimers();
         CreateClassicGamePersona();
 
+        OnTriggerCurrentScoreChange();
         OnTriggerPlayerLifeChange();
         OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "READY!");
 
-        Invoke("StartLevel", 3);
+        Invoke("UnPause", 3);
     }
     private void NextLevel()
     {
@@ -145,7 +148,7 @@ public partial class GameManager: MonoBehaviour
         CreateClassicGamePersona();
         OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "READY!");
 
-        Invoke("StartLevel", 3);
+        Invoke("UnPause", 3);
     }
     private void ResetTimers()
     {
@@ -155,9 +158,9 @@ public partial class GameManager: MonoBehaviour
         _activeWaveTimer = 0;
     }
 
-    private void StartLevel()
+    private void UnPause()
     {
-        _levelPaused = false;
+        _levelPause = false;
         OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "");
     }
     private void UpdateTimers()
@@ -188,6 +191,12 @@ public partial class GameManager: MonoBehaviour
                 }
             }
         }
+    }
+    private void GameOver()
+    {
+        _levelStarted = false;
+        _levelPause = true;
+        if (OnGameOver != null) { OnGameOver(this, null); }
     }
 }
 
@@ -249,7 +258,6 @@ public partial class GameManager
         }
         else { Debug.Log("No map visualizator"); }
     }
-
     private void CreateClassicGamePersona()
     {
         if (_personas != null)
@@ -301,7 +309,6 @@ public partial class GameManager
             _personas.Add(inky);
         }
     }
-
     private void AddLevelBonus()
     {
         if (_levelBonus == null) { _levelBonus = new List<CellType>(); }
@@ -363,7 +370,7 @@ public partial class GameManager
 
         if (_eatenPoints.Count == _totalPoints)
         {
-            _levelPaused = false;
+            _levelPause = false;
             NextLevel();
         }
     }
@@ -377,15 +384,15 @@ public partial class GameManager
 
         OnTriggerCurrentScoreChange();
         OnTriggerFloatingMessage(gb.transform.position, ghostPoint.ToString());
-        _levelPaused = false;
-        Invoke("StartLevel", 0.5f);
+        _levelPause = true;
+        Invoke("UnPause", 0.5f);
     }
     private void HandlePlayerDead(PacManController pmc)
     {
         if (pmc != null)
         {
             pmc.OnDie();
-            _levelPaused = false;
+            _levelPause = true;
             _playerLife--;
 
             if (_playerLife < 0)

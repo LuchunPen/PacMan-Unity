@@ -54,3 +54,12 @@ public class CellEventArgs: EventArgs
         BonusType = bonus;
     }
 }
+
+public class BoolEventArgs : EventArgs
+{
+    public bool Value;
+    public BoolEventArgs(bool value)
+    {
+        Value = value;
+    }
+}

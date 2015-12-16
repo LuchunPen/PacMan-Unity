@@ -6,7 +6,11 @@ using System.Collections.Generic;
 
 public class UIManager: MonoBehaviour
 {
-    public GameObject StartScreen;
+    public StartMenu StartScreen;
+    private int _activeMenu;
+    private Action _activeAction;
+
+
     private RectTransform _canvasTrans;
 
     public Image LifeImg;
@@ -28,6 +32,7 @@ public class UIManager: MonoBehaviour
 
     void Awake ()
     {
+        _activeMenu = 0;
         _canvasTrans = this.GetComponent<RectTransform>();
         _lifesprites = new List<Image>();
         _bonusSprites = new List<Image>();
@@ -37,11 +42,26 @@ public class UIManager: MonoBehaviour
         GameManager.Instance.OnFloatingMessage += OnFloatingTextCreator;
         GameManager.Instance.OnBonusPlaced += OnBonusPlaceHandler;
         GameManager.Instance.OnStartGame += OnStartGameHandler;
+        GameManager.Instance.OnGameOver += OnGameOverHandler;
+        GameManager.Instance.OnGamePause += OngamePauseHandler;
+    }
+
+    void Update()
+    {
+        CheckMenu();
+    }
+
+    private void CheckMenu()
+    {
+        if (StartScreen.gameObject.activeInHierarchy == true)
+        {
+            StartScreen.OnUpdate();
+        }
     }
 	
     private void OnStartGameHandler(object sender, EventArgs args)
     {
-        StartScreen.SetActive(false);
+        StartScreen.gameObject.SetActive(false);
     }
 
     private void OnCurrentScoreHandler(object sender, ScoreArgs args)
@@ -51,7 +71,7 @@ public class UIManager: MonoBehaviour
     private void OnLevelMessageHandler(object sender, MessageArgs args)
     {
         LevelMessage.rectTransform.position = args.Position;
-        LevelMessage.text = args.Msg;
+        if (LevelMessage.text != "Paused") { LevelMessage.text = args.Msg; }
     }
     private void OnPlayerLifeHandler(object sender, ScoreArgs args)
     {
@@ -107,5 +127,14 @@ public class UIManager: MonoBehaviour
                 _bonusSprites.Add(img);
             }
         }
+    }
+    private void OnGameOverHandler(object sender, EventArgs args)
+    {
+        StartScreen.gameObject.SetActive(true);
+    }
+    private void OngamePauseHandler(object sender, BoolEventArgs args)
+    {
+        if (args.Value) { LevelMessage.text = "Paused"; }
+        else { LevelMessage.text = ""; }
     }
 }
