@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System;
+using System.Collections.Generic;
 
 public class Collision2DArgs: EventArgs
 {
@@ -42,5 +43,14 @@ public class LevelWaveArgs : EventArgs
     public LevelWaveArgs(GhostState state)
     {
         State = state;
+    }
+}
+
+public class CellEventArgs: EventArgs
+{
+    public List<CellType> BonusType;
+    public CellEventArgs(List<CellType> bonus)
+    {
+        BonusType = bonus;
     }
 }

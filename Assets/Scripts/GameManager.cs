@@ -22,6 +22,7 @@ public partial class GameManager: MonoBehaviour
     public EventHandler<ScoreArgs> OnCurrentScoreChange;
     public EventHandler<MessageArgs> OnLevelMessage;
     public EventHandler<ScoreArgs> OnPlayerLifeChange;
+    public EventHandler<CellEventArgs> OnBonusPlaced;
     public EventHandler<MessageArgs> OnFloatingMessage;
 
     private int _currentScore;
@@ -80,6 +81,7 @@ public partial class GameManager: MonoBehaviour
 
 	void Start ()
     {
+
         PrepareGame();
     }
 
@@ -102,6 +104,7 @@ public partial class GameManager: MonoBehaviour
         _playerLife = 2;
 
         CreateMap();
+        AddLevelBonus();
         ResetTimers();
         CreateClassicGamePersona();
 
@@ -185,8 +188,9 @@ public partial class GameManager
     public PacManMapTXTExtractor MapCreator;
     public PacManMapVisualizer MapVisualizer;
 
+    private List<CellType> _levelBonus;
+    public List<Vector2> _eatenPoints;
     private int _totalPoints;
-    private int _eatedPoints;
 
     public int TotalPoints
     {
@@ -194,7 +198,7 @@ public partial class GameManager
     }
     public int EatedPoints
     {
-        get { return _eatedPoints; }
+        get { return _eatenPoints.Count; }
     }
 
     private void CreateMap()
@@ -284,6 +288,15 @@ public partial class GameManager
         }
     }
 
+    private void AddLevelBonus()
+    {
+        if (_levelBonus == null) { _levelBonus = new List<CellType>(); }
+        else { _levelBonus.Clear(); }
+        _levelBonus.Add(CellType.Cherry);
+        _levelBonus.Add(CellType.Cherry);
+        OnTriggerBonusPlaced();
+    }
+
     #region EventHandlers
     private void OnPlayerCollisionHandler(object sender, Collision2DArgs arg)
     {
@@ -309,18 +322,32 @@ public partial class GameManager
         int ix = Mathf.FloorToInt(position.x);
         int iy = Mathf.FloorToInt(position.y);
 
-        if (_map[ix,iy].CType == CellType.Point) { _eatedPoints++; }
+        if (_map[ix,iy].CType == CellType.Point)
+        { _eatenPoints.Add(new Vector2(ix, iy)); }
 
         if (_map[ix, iy].CType == CellType.Energizer)
         {
-            _eatedPoints++;
+            _eatenPoints.Add(new Vector2(ix, iy));
             _frightTime = LevelFrightTime;
             if (GhostBehaviourEvent != null) GhostBehaviourEvent(this, new LevelWaveArgs(GhostState.Frightened));
         }
         _map[ix, iy].CType = CellType.None;
         MapVisualizer.RefreshVisualData(position); 
         
-        if (_eatedPoints == _totalPoints)
+        if (_eatenPoints.Count == 70 || _eatenPoints.Count == 170)
+        {
+            if (_levelBonus != null && _levelBonus.Count > 0)
+            {
+                Vector2 bonusPos = _eatenPoints[UnityEngine.Random.Range(0, _eatenPoints.Count)];
+                _map[(int)bonusPos.x, (int)bonusPos.y].CType = _levelBonus[0];
+                _levelBonus.RemoveAt(0);
+                OnTriggerBonusPlaced();
+
+                MapVisualizer.RefreshVisualData(bonusPos);
+            }
+        }
+
+        if (_eatenPoints.Count == _totalPoints)
         {
             _levelStarted = false;
             NextLevel();
@@ -347,7 +374,10 @@ public partial class GameManager
             _levelStarted = false;
             _playerLife--;
 
-            if (_playerLife < 0) { Invoke("GameOver", 3); }
+            if (_playerLife < 0)
+            {
+                Invoke("GameOver", 3);
+            }
             else
             {
                 OnTriggerPlayerLifeChange();
@@ -371,6 +401,13 @@ public partial class GameManager
     private void OnTriggerFloatingMessage(Vector3 position, string msg)
     {
         if (OnFloatingMessage != null) { OnFloatingMessage(this, new MessageArgs(position, Color.white, msg)); }
+    }
+    private void OnTriggerBonusPlaced()
+    {
+        if (OnBonusPlaced != null)
+        {
+            OnBonusPlaced(this, new CellEventArgs(_levelBonus));
+        }
     }
     #endregion Eventhandlers
 }

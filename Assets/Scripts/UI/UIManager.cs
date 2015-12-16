@@ -1,15 +1,21 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 
+using System;
 using System.Collections.Generic;
 
 public class UIManager: MonoBehaviour
 {
     private RectTransform _canvasTrans;
 
-    public Image lifeimg;
+    public Image LifeImg;
+    public Image CherryImg;
+
     public RectTransform LifeContainer;
     private List<Image> _lifesprites;
+
+    public RectTransform BonusContainer;
+    private List<Image> _bonusSprites;
 
     public Text PlayerScore;
     public Text HighScore;
@@ -23,10 +29,12 @@ public class UIManager: MonoBehaviour
     {
         _canvasTrans = this.GetComponent<RectTransform>();
         _lifesprites = new List<Image>();
+        _bonusSprites = new List<Image>();
         GameManager.Instance.OnCurrentScoreChange += OnCurrentScoreHandler;
         GameManager.Instance.OnLevelMessage += OnLevelMessageHandler;
         GameManager.Instance.OnPlayerLifeChange += OnPlayerLifeHandler;
         GameManager.Instance.OnFloatingMessage += OnFloatingTextCreator;
+        GameManager.Instance.OnBonusPlaced += OnBonusPlaceHandler;
     }
 	
     private void OnCurrentScoreHandler(object sender, ScoreArgs args)
@@ -42,7 +50,6 @@ public class UIManager: MonoBehaviour
 
     private void OnPlayerLifeHandler(object sender, ScoreArgs args)
     {
-        Debug.Log(args.Score);
         int count = args.Score;
         int lifecount = _lifesprites.Count;
 
@@ -50,7 +57,7 @@ public class UIManager: MonoBehaviour
         {
             for (int i = 0; i < count - lifecount; i++)
             {
-                Image img = Instantiate(lifeimg);
+                Image img = Instantiate(LifeImg);
                 img.rectTransform.SetParent(LifeContainer);
                 img.rectTransform.localScale = new Vector3(1, 1, 1);
                 _lifesprites.Add(img);
@@ -75,5 +82,26 @@ public class UIManager: MonoBehaviour
         go.Initialize(floatingTextSpeed, new Vector3(0,1,0), 3);
         go.GetComponent<Text>().text = args.Msg;
         go.GetComponent<Text>().color = args.MsgColor;
+    }
+    private void OnBonusPlaceHandler(object sender, CellEventArgs args)
+    {
+        foreach (Image img in _bonusSprites) { Destroy(img.gameObject); }
+        _bonusSprites.Clear();
+        for (int i = 0; i < args.BonusType.Count; i++)
+        {
+            CellType bonus = args.BonusType[i];
+            Image img = null;
+            switch (bonus)
+            {
+                case CellType.Cherry: img = Instantiate(CherryImg); break;
+                //add some other bonus
+            }
+            if (img != null)
+            {
+                img.rectTransform.SetParent(BonusContainer);
+                img.rectTransform.localScale = new Vector3(1, 1, 1);
+                _bonusSprites.Add(img);
+            }
+        }
     }
 }
