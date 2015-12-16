@@ -6,6 +6,7 @@ using System.Collections.Generic;
 
 public class UIManager: MonoBehaviour
 {
+    public GameObject StartScreen;
     private RectTransform _canvasTrans;
 
     public Image LifeImg;
@@ -35,19 +36,23 @@ public class UIManager: MonoBehaviour
         GameManager.Instance.OnPlayerLifeChange += OnPlayerLifeHandler;
         GameManager.Instance.OnFloatingMessage += OnFloatingTextCreator;
         GameManager.Instance.OnBonusPlaced += OnBonusPlaceHandler;
+        GameManager.Instance.OnStartGame += OnStartGameHandler;
     }
 	
+    private void OnStartGameHandler(object sender, EventArgs args)
+    {
+        StartScreen.SetActive(false);
+    }
+
     private void OnCurrentScoreHandler(object sender, ScoreArgs args)
     {
         PlayerScore.text = args.Score.ToString();
     }
-
     private void OnLevelMessageHandler(object sender, MessageArgs args)
     {
         LevelMessage.rectTransform.position = args.Position;
         LevelMessage.text = args.Msg;
     }
-
     private void OnPlayerLifeHandler(object sender, ScoreArgs args)
     {
         int count = args.Score;
@@ -73,7 +78,6 @@ public class UIManager: MonoBehaviour
             }
         }
     }
-
     private void OnFloatingTextCreator(object sender, MessageArgs args)
     {
         FloatingText go = Instantiate(textPref, args.Position, Quaternion.identity) as FloatingText;

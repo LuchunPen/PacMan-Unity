@@ -19,12 +19,14 @@ public partial class GameManager: MonoBehaviour
         }
     }
 
+    public EventHandler OnStartGame;
     public EventHandler<ScoreArgs> OnCurrentScoreChange;
     public EventHandler<MessageArgs> OnLevelMessage;
     public EventHandler<ScoreArgs> OnPlayerLifeChange;
     public EventHandler<CellEventArgs> OnBonusPlaced;
     public EventHandler<MessageArgs> OnFloatingMessage;
 
+    private bool _levelStarted;
     private int _currentScore;
     private int _playerLife;
 
@@ -64,7 +66,7 @@ public partial class GameManager: MonoBehaviour
     public float LevelFrightTime;
     public float _activeWaveTimer;
     public int _activeWave;
-    private bool _levelStarted = false;
+    private bool _levelPaused = true;
 
     public float _frightTime;
     public float FrightTime
@@ -82,24 +84,36 @@ public partial class GameManager: MonoBehaviour
 	void Start ()
     {
 
-        PrepareGame();
     }
 
     void Update()
     {
-        if (_levelStarted)
+        if (!_levelStarted)
         {
-            if (Input.GetKeyDown(KeyCode.R))
+            if ((Input.GetKeyDown(KeyCode.Space)) || (Input.GetKeyDown(KeyCode.Return)))
             {
-                PacManController pcm = _personas[0].GetComponent<PacManController>();
-                HandlePlayerDead(pcm);
+                _levelStarted = true;
+                if (OnStartGame != null) OnStartGame(this, null);
+                PrepareGame();
             }
-            UpdateTimers();
-            foreach(Persona p in _personas) { p.OnUpdate(); }
+        }
+
+        else
+        {
+            if(!_levelPaused)
+            {
+                if (Input.GetKeyDown(KeyCode.R))
+                {
+                    PacManController pcm = _personas[0].GetComponent<PacManController>();
+                    HandlePlayerDead(pcm);
+                }
+                UpdateTimers();
+                foreach (Persona p in _personas) { p.OnUpdate(); }
+            }
         }
     }
     
-    private void PrepareGame()
+    public void PrepareGame()
     {
         _playerLife = 2;
 
@@ -143,7 +157,7 @@ public partial class GameManager: MonoBehaviour
 
     private void StartLevel()
     {
-        _levelStarted = true;
+        _levelPaused = false;
         OnTriggerLevelMessageChange(new Vector3(14, 15.5f, 0), "");
     }
     private void UpdateTimers()
@@ -349,7 +363,7 @@ public partial class GameManager
 
         if (_eatenPoints.Count == _totalPoints)
         {
-            _levelStarted = false;
+            _levelPaused = false;
             NextLevel();
         }
     }
@@ -363,7 +377,7 @@ public partial class GameManager
 
         OnTriggerCurrentScoreChange();
         OnTriggerFloatingMessage(gb.transform.position, ghostPoint.ToString());
-        _levelStarted = false;
+        _levelPaused = false;
         Invoke("StartLevel", 0.5f);
     }
     private void HandlePlayerDead(PacManController pmc)
@@ -371,7 +385,7 @@ public partial class GameManager
         if (pmc != null)
         {
             pmc.OnDie();
-            _levelStarted = false;
+            _levelPaused = false;
             _playerLife--;
 
             if (_playerLife < 0)
