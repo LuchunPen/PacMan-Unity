@@ -7,9 +7,6 @@ using System.Collections.Generic;
 public class UIManager: MonoBehaviour
 {
     public StartMenu StartScreen;
-    private int _activeMenu;
-    private Action _activeAction;
-
 
     private RectTransform _canvasTrans;
 
@@ -30,9 +27,8 @@ public class UIManager: MonoBehaviour
     public FloatingText textPref;
     public float floatingTextSpeed;
 
-    void Awake ()
+    void Start ()
     {
-        _activeMenu = 0;
         _canvasTrans = this.GetComponent<RectTransform>();
         _lifesprites = new List<Image>();
         _bonusSprites = new List<Image>();

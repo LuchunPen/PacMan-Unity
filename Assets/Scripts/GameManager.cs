@@ -9,15 +9,11 @@ public partial class GameManager: MonoBehaviour
     {
         get
         {
-            if (_instance == null)
-            {
-                GameManager gm = Resources.Load("Prefabs/GameManager", typeof(GameManager)) as GameManager;
-                gm = Instantiate(gm);
-                _instance = gm;
-            }
             return _instance;
         }
     }
+
+    public GameObject UIroot;
 
     public EventHandler OnStartGame;
     public EventHandler OnGameOver;
@@ -81,6 +77,7 @@ public partial class GameManager: MonoBehaviour
 
     void Awake()
     {
+        CreateUI();
         if (_instance == null) { _instance = this; }
         else { Destroy(this.gameObject); }
     }
@@ -111,6 +108,11 @@ public partial class GameManager: MonoBehaviour
                 foreach (Persona p in _personas) { p.OnUpdate(); }
             }
         }
+    }
+
+    private void CreateUI()
+    {
+        Instantiate(UIroot);
     }
     
     public void PrepareGame()
